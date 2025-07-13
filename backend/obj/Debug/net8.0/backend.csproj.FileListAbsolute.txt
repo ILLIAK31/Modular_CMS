@@ -141,3 +141,6 @@ C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\Microsoft.IdentityModel.JsonWebToken
 C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Logging.dll
 C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
 C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
+C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.dll
+C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
