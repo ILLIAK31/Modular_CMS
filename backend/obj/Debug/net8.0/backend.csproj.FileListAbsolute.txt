@@ -144,3 +144,5 @@ C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
 C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.dll
 C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\Application\obj\Application.csproj.nuget.dgspec.json
+C:\ZUT\Modular_CMS\backend\bin\Debug\net8.0\Application\obj\project.assets.json
