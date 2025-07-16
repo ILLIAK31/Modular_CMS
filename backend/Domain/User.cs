@@ -2,8 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace backend.Application.Auth.Models
 {
-    public class RegisterModel
+    public class User
     {
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
+
         [Required]
         [MaxLength(100)]
         public string Username { get; set; } = string.Empty;
@@ -14,8 +17,9 @@ namespace backend.Application.Auth.Models
         public string Email { get; set; } = string.Empty;
 
         [Required]
-        [MinLength(6)]
-        [DataType(DataType.Password)]
-        public string Password { get; set; } = string.Empty;
+        public byte[] PasswordHash { get; set; } = Array.Empty<byte>();
+
+        [Required]
+        public byte[] PasswordSalt { get; set; } = Array.Empty<byte>();
     }
 }

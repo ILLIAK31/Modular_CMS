@@ -1,5 +1,6 @@
 using System.Text;
 using backend.Persistence;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -16,8 +17,22 @@ var secretKey = jwtSettings["SecretKey"];
 if (string.IsNullOrEmpty(secretKey)) 
     throw new Exception("JWT SecretKey is not configured.");
 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, opts =>
+    {
+        opts.Cookie.Name = "auth_cookie";
+        opts.LoginPath = "/api/auth/login";
+        opts.LogoutPath = "/api/auth/logout";
+        opts.Cookie.HttpOnly = true;
+        opts.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        opts.ExpireTimeSpan = TimeSpan.FromDays(7);
+    })
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -27,7 +42,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+            IssuerSigningKey = key
         };
     });
 builder.Services.AddAuthorization();
@@ -44,5 +59,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.Run();

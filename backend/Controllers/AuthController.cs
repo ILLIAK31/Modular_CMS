@@ -6,6 +6,13 @@ using System.IdentityModel.Tokens.Jwt;
 using backend.Services;
 using backend.Persistence;
 using Microsoft.EntityFrameworkCore;
+using backend.Application.Auth.Models;
+using Microsoft.AspNetCore.Identity;
+using backend.Application.Core;
+using backend.Domain.Entities;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace backend.Controllers
 {
@@ -83,11 +90,49 @@ namespace backend.Controllers
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true, 
+                Secure = true,
                 SameSite = SameSiteMode.Strict,
                 Expires = DateTime.UtcNow.AddDays(7)
             };
             Response.Cookies.Append("refreshToken", token, cookieOptions);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterModel model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            if (await _context.Users.AnyAsync(u => u.Email == model.Email))
+                return BadRequest("Email already in use.");
+            if (await _context.Users.AnyAsync(u => u.Username == model.Username))
+                return BadRequest("Username already taken.");
+
+            using var hmac = new System.Security.Cryptography.HMACSHA512();
+            var user = new User
+            {
+                Username = model.Username,
+                Email = model.Email,
+                PasswordSalt = hmac.Key,
+                PasswordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(model.Password))
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Username)
+            };
+            var creds = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            await HttpContext.SignInAsync
+            (
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(creds),
+                new AuthenticationProperties { IsPersistent = true }
+            );
+            return Ok(new { message = "Registration successful." });
         }
     }
 }
