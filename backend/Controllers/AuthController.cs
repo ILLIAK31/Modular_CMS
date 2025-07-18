@@ -7,9 +7,6 @@ using backend.Services;
 using backend.Persistence;
 using Microsoft.EntityFrameworkCore;
 using backend.Application.Auth.Models;
-using Microsoft.AspNetCore.Identity;
-using backend.Application.Core;
-using backend.Domain.Entities;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -31,20 +28,29 @@ namespace backend.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
-            if (model.Username == "demo" && model.Password == "demo")
-            {
-                var tokenService = new TokenService(_configuration);
-                var accessToken = tokenService.GenerateAccessToken(model.Username);
-                var refreshToken = tokenService.GenerateRefreshToken(model.Username);
-                var oldTokens = _context.RefreshTokens
-                    .Where(r => r.Username == model.Username && !r.IsRevoked && !r.IsExpired);
-                _context.RefreshTokens.RemoveRange(oldTokens);
-                _context.RefreshTokens.Add(refreshToken);
-                await _context.SaveChangesAsync();
-                SetRefreshTokenCookie(refreshToken.Token);
-                return Ok(new { AccessToken = new JwtSecurityTokenHandler().WriteToken(accessToken) });
-            }
-            return Unauthorized("Invalid credentials.");
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username);
+            if (user == null)
+                return Unauthorized("Invalid credentials.");
+
+            using var hmac = new System.Security.Cryptography.HMACSHA512(user.PasswordSalt);
+            var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(model.Password));
+            if (!computedHash.SequenceEqual(user.PasswordHash))
+                return Unauthorized("Invalid credentials.");
+
+            var tokenService = new TokenService(_configuration);
+            var accessToken = tokenService.GenerateAccessToken(model.Username);
+            var refreshToken = tokenService.GenerateRefreshToken(model.Username);
+            var now = DateTime.UtcNow;
+            var oldTokens = _context.RefreshTokens
+                .Where(r => r.Username == user.Username && !r.IsRevoked && r.Expires > now);
+            _context.RefreshTokens.RemoveRange(oldTokens);
+            _context.RefreshTokens.Add(refreshToken);
+            await _context.SaveChangesAsync();
+            SetRefreshTokenCookie(refreshToken.Token);
+            return Ok(new { AccessToken = new JwtSecurityTokenHandler().WriteToken(accessToken) });
         }
 
         [AllowAnonymous]
@@ -54,8 +60,9 @@ namespace backend.Controllers
             var token = Request.Cookies["refreshToken"];
             if (string.IsNullOrWhiteSpace(token))
                 return Unauthorized("No refresh token found.");
-            var oldToken = await _context.RefreshTokens.FirstOrDefaultAsync(r => r.Token == token);
-            if (oldToken == null || !oldToken.IsActive)
+            var oldToken = await _context.RefreshTokens
+                .FirstOrDefaultAsync(r => r.Token == token);
+            if (oldToken == null || oldToken.IsRevoked || oldToken.Expires <= DateTime.UtcNow)
                 return Unauthorized("Invalid or expired refresh token.");
             oldToken.IsRevoked = true;
             var tokenService = new TokenService(_configuration);
