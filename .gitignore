@@ -488,3 +488,4 @@ appsettings.Local.json
 appsettings.*.Secrets.json
 secrets.json
 appsettings.json
+*.http
